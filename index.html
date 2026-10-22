@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="34-second schematic anatomy of a methalox full-flow staged combustion engine: two preburners, two turbopumps, all-gas injection.">
+<title>Methalox full-flow staged combustion, anatomy jig</title>
+<style>
+  :root {
+    --bg: #07080b; --ch4: #00e5ff; --lox: #e0f7fa; --mach: #1a8cff;
+    --bone: #d5d8df; --dim: #8b919c; --line: rgba(224,247,250,.16);
+    --panel: rgba(12,14,18,.78);
+    --sans: Inter, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--bone); font-family: var(--sans); }
+  body { overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 46% 48%, transparent 42%, rgba(0,0,0,.5) 100%); }
+  .mark { position: absolute; width: 16px; height: 16px; border: 0 solid rgba(0,229,255,.4); pointer-events: none; }
+  .mark.tl { top: 56px; left: 14px; border-top-width: 1px; border-left-width: 1px; }
+  .mark.tr { top: 56px; right: 14px; border-top-width: 1px; border-right-width: 1px; }
+  .mark.bl { bottom: 78px; left: 14px; border-bottom-width: 1px; border-left-width: 1px; }
+  .mark.br { bottom: 78px; right: 14px; border-bottom-width: 1px; border-right-width: 1px; }
+  header { position: fixed; top: 14px; left: 28px; z-index: 3; pointer-events: none; max-width: min(46vw, 520px); }
+  .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--ch4); margin: 0 0 4px; }
+  h1 { font-size: clamp(18px, 2vw, 26px); font-weight: 560; letter-spacing: .03em; margin: 0; }
+  header p { margin: 4px 0 0; color: var(--dim); font-size: 12px; }
+  #plate { position: fixed; top: 86px; right: 22px; width: min(340px, 32vw); z-index: 3; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; backdrop-filter: blur(10px); pointer-events: none; }
+  #plate h2 { font-size: 16px; margin: 0 0 8px; font-weight: 560; }
+  #plate .body { margin: 0; color: #c5cad3; font-size: 12.5px; line-height: 1.45; }
+  #plate dl { margin: 10px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+  #plate dt { color: var(--dim); font-size: 11px; }
+  #plate dd { margin: 0; font-family: var(--mono); font-size: 11px; text-align: right; }
+  body[data-mode="split"] #plate { top: auto; bottom: 78px; left: 50%; right: auto; width: min(720px, 92vw); transform: translateX(-50%); max-height: 112px; overflow: hidden; }
+  body[data-mode="split"] #plate dl, body[data-heat="1"] #about { display: none; }
+  #panels[hidden], #legend[hidden], #reduce-note[hidden] { display: none; }
+  .panel-tag { position: absolute; top: 74px; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; pointer-events: none; }
+  .panel-tag.left { left: 28px; color: var(--ch4); }
+  .panel-tag.right { left: calc(50% + 22px); color: var(--lox); }
+  .divider { position: absolute; top: 70px; bottom: 86px; left: 50%; width: 1px; background: linear-gradient(transparent, rgba(0,229,255,.65), rgba(224,247,250,.55), transparent); pointer-events: none; }
+  #legend { position: fixed; left: 28px; bottom: 92px; z-index: 3; width: 220px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; pointer-events: none; }
+  #legend strong { display: block; font-size: 11px; letter-spacing: .12em; margin-bottom: 8px; }
+  .bar { height: 8px; border-radius: 99px; margin-bottom: 8px; background: linear-gradient(90deg, #00e5ff, #3d271d 42%, #c47a45 68%, #1a8cff); }
+  #legend ol { margin: 0; padding-left: 16px; color: #c5cad3; font-size: 11px; line-height: 1.4; }
+  #legend p { margin: 6px 0 0; color: var(--dim); font-size: 10px; }
+  #about { position: fixed; left: 28px; bottom: 92px; z-index: 3; width: min(360px, 40vw); font-size: 11px; color: var(--dim); }
+  #about summary { cursor: pointer; font-family: var(--mono); letter-spacing: .12em; }
+  #about .frame { margin-top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  #about li { margin: 0 0 4px; line-height: 1.35; }
+  #fade { position: fixed; inset: 0; background: #07080b; pointer-events: none; z-index: 4; opacity: 0; }
+  #reduce-note { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 6; background: #12141a; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-family: var(--mono); font-size: 11px; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 16px 12px; background: linear-gradient(transparent, rgba(7,8,11,.92) 28%); }
+  .transport, .shots { display: flex; gap: 6px; align-items: center; }
+  button { background: #12141a; color: var(--bone); border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; padding: 7px 10px; cursor: pointer; }
+  button:hover { border-color: rgba(0,229,255,.55); }
+  button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--ch4); outline-offset: 2px; }
+  .shots button { padding: 4px 7px; color: var(--dim); }
+  .shots button.on { color: #061014; background: var(--ch4); border-color: var(--ch4); }
+  .rail { position: relative; height: 28px; display: flex; align-items: center; }
+  .segs { position: absolute; left: 0; right: 0; top: 8px; height: 4px; display: flex; gap: 2px; }
+  .segs i { display: block; height: 100%; background: #1c212b; }
+  .segs i.on { background: var(--ch4); }
+  input[type="range"] { position: relative; width: 100%; margin: 0; appearance: none; background: transparent; height: 28px; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+  input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: var(--bone); border: 2px solid var(--ch4); }
+  .readout { font-family: var(--mono); font-size: 11px; text-align: right; min-width: 210px; }
+  .readout span { color: var(--dim); }
+  @media (max-width: 880px) {
+    header p, #plate dl, #legend, #about { display: none; }
+    header { max-width: 72vw; }
+    #plate { top: auto; bottom: 118px; left: 10px; right: 10px; width: auto; max-height: 128px; overflow: hidden; padding: 8px 10px; transform: none; }
+    #plate .body { font-size: 11.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    footer { grid-template-columns: auto 1fr; gap: 6px; padding: 8px 10px 10px; }
+    .readout { grid-column: 1 / -1; text-align: left; min-width: 0; font-size: 10px; }
+    .shots { overflow-x: auto; }
+    .panel-tag.right { left: calc(50% + 10px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body data-mode="skirt" data-heat="0">
+<canvas id="view" aria-label="Schematic methalox full-flow staged combustion engine"></canvas>
+<div class="vignette"></div>
+<i class="mark tl"></i><i class="mark tr"></i><i class="mark bl"></i><i class="mark br"></i>
+<header>
+  <p class="kicker">ANATOMY JIG · 30 FPS · 1,020 FRAMES</p>
+  <h1>METHALOX FULL-FLOW</h1>
+  <p>Staged combustion. Two preburners. Two turbopumps.</p>
+</header>
+<aside id="plate">
+  <p class="kicker" id="plate-kicker"></p>
+  <h2 id="plate-title"></h2>
+  <p class="body" id="plate-body"></p>
+  <dl id="plate-stats"></dl>
+</aside>
+<div id="panels" hidden>
+  <div class="divider"></div>
+  <div class="panel-tag left">FUEL-RICH PREBURNER</div>
+  <div class="panel-tag right">OXYGEN-RICH PREBURNER</div>
+</div>
+<div id="legend" hidden>
+  <strong>ORDINAL MAP</strong>
+  <div class="bar"></div>
+  <ol>
+    <li>Cryo methane in the copper wall</li>
+    <li>Throat heat-flux peak, schematic</li>
+    <li>Chamber gas, mach blue code</li>
+  </ol>
+  <p>Not a CFD solution. Not a measured temperature.</p>
+</div>
+<div id="fade"></div>
+<div id="reduce-note" hidden>Motion paused. Play runs the 34s jig.</div>
+<details id="about">
+  <summary>PRODUCT FRAME</summary>
+  <div class="frame">
+    <ol>
+      <li>A 34-second schematic of a methane / liquid-oxygen full-flow staged combustion engine.</li>
+      <li>For readers who need the two-preburner path to stay unambiguous.</li>
+      <li>Storyboard setpoints stay labeled as storyboard setpoints.</li>
+      <li>One static page. Five shots. Cuts at 5, 10, 17, 25, and 34 seconds.</li>
+      <li>Published from the gh-pages branch. No ranking claim.</li>
+      <li>Play, scrub, or jump with keys 1 through 5.</li>
+      <li>No form. The last frame is the wide gimbal shot.</li>
+      <li>Teaching piece. No price.</li>
+      <li>GitHub Pages, branch gh-pages, root path.</li>
+      <li>Replace the contour only with a cleared geometry source.</li>
+    </ol>
+  </div>
+</details>
+<footer>
+  <div class="transport">
+    <button id="play" type="button">PAUSE</button>
+    <button id="restart" type="button">RESTART</button>
+  </div>
+  <div>
+    <div class="rail">
+      <div class="segs" aria-hidden="true">
+        <i style="width:14.7059%"></i><i style="width:14.7059%"></i><i style="width:20.5882%"></i><i style="width:23.5294%"></i><i style="width:26.4706%"></i>
+      </div>
+      <input id="scrub" type="range" min="0" max="1019" value="0" aria-label="Frame scrubber">
+    </div>
+    <div class="shots">
+      <button type="button" data-jump="0">01 SKIRT</button>
+      <button type="button" data-jump="150">02 PREBURNERS</button>
+      <button type="button" data-jump="300">03 PUMPS</button>
+      <button type="button" data-jump="510">04 INJECTOR</button>
+      <button type="button" data-jump="750">05 EXPANSION</button>
+    </div>
+  </div>
+  <div class="readout">
+    <div id="tc">00:00.00 · f 0000</div>
+    <div><span>space</span> play · <span>arrows</span> frame · <span>1-5</span> shots</div>
+  </div>
+</footer>
+<script>
+(function () {
+  "use strict";
+  const FPS = 30, TOTAL = 1020;
+  const PIVOT = { x: 0, y: 3.74, z: 0 };
+  const YT = 2.12, YC0 = 2.48, YC1 = 3.58, RE = 1.58, RT = 0.27, RC = 0.54;
+  const FUEL = { x: -1.78, y: 3.55, z: 0.08 };
+  const OX = { x: 1.78, y: 3.55, z: 0.08 };
+  const MAT = {
+    inconel: [22, 24, 29], copper: [124, 76, 48], copperInner: [32, 18, 14],
+    steel: [48, 54, 64], frame: [78, 86, 98], fuel: [10, 52, 64], lox: [150, 188, 196],
+    hotfuel: [18, 78, 96], hotox: [186, 196, 198], bearing: [140, 148, 158]
+  };
+  const canvas = document.getElementById("view");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  const q = new URLSearchParams(location.search);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const req = q.get("frame") || q.get("f");
+  let frame = clamp(parseInt(req || "0", 10) || 0, 0, TOTAL - 1);
+  if (reduce && req == null) frame = 150;
+  const still = q.has("still") || (req != null && !q.has("play"));
+  let playing = !still && !reduce;
+  if (q.get("play") === "1" && !reduce) playing = true;
+  let scrubbing = false, acc = 0, lastT = performance.now();
+  const built = [], pipes = [];
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ease(t) { t = clamp01(t); return t * t * (3 - 2 * t); }
+  function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }; }
+  function dot(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+  function cross(a, b) { return { x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x }; }
+  function len(a) { return Math.hypot(a.x, a.y, a.z); }
+  function normalize(a) { const L = len(a) || 1; return { x: a.x / L, y: a.y / L, z: a.z / L }; }
+  function neg(n) { return { x: -n.x, y: -n.y, z: -n.z }; }
+  function rotX(p, a, pivot) {
+    const c = Math.cos(a), s = Math.sin(a), y = p.y - pivot.y, z = p.z - pivot.z;
+    return { x: p.x, y: pivot.y + y * c - z * s, z: pivot.z + y * s + z * c };
+  }
+  function rotXd(p, a) { const c = Math.cos(a), s = Math.sin(a); return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c }; }
+  function rotY(p, a, pivot) {
+    const c = Math.cos(a), s = Math.sin(a), x = p.x - pivot.x, z = p.z - pivot.z;
+    return { x: pivot.x + x * c + z * s, y: p.y, z: pivot.z - x * s + z * c };
+  }
+  function rotYd(p, a) { const c = Math.cos(a), s = Math.sin(a); return { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c }; }
+  function contour(y) {
+    if (y <= YT) return RT + (RE - RT) * Math.pow(Math.cos((y / YT) * Math.PI * 0.5), 0.65);
+    if (y <= YC0) return RT + (RC - RT) * Math.sin(((y - YT) / (YC0 - YT)) * Math.PI * 0.5);
+    return RC;
+  }
+  function jacketR(y) { return contour(y) + 0.086 + Math.exp(-((y - YT) ** 2) / 0.012) * 0.05; }
+  function copperR(y) { return contour(y) + 0.032; }
+
+  function createPart(opts) {
+    const part = Object.assign({ role: "shell", gimbal: true, explode: 0, center: { x: 0, y: 0, z: 0 }, cutGroup: "shell", spin: false, cls: "shell", verts: [], faces: [] }, opts);
+    built.push(part);
+    return part;
+  }
+  function addFace(part, ia, ib, ic, id, kind, mat, hint) {
+    const a = part.verts[ia], b = part.verts[ib], c = part.verts[ic], d = part.verts[id];
+    let n = cross(sub(b, a), sub(c, a));
+    const nL = len(n);
+    if (nL < 1e-6) return;
+    n = { x: n.x / nL, y: n.y / nL, z: n.z / nL };
+    const mid = { x: (a.x + b.x + c.x + d.x) / 4, y: (a.y + b.y + c.y + d.y) / 4, z: (a.z + b.z + c.z + d.z) / 4 };
+    const radial = { x: mid.x - part.center.x, z: mid.z - part.center.z };
+    const rl = Math.hypot(radial.x, radial.z);
+    if (hint === "out") n = (rl < 0.08 ? (n.y < 0 ? neg(n) : n) : (dot(n, { x: radial.x, y: 0, z: radial.z }) < 0 ? neg(n) : n));
+    if (hint === "in") n = (rl < 0.08 ? (n.y > 0 ? neg(n) : n) : (dot(n, { x: radial.x, y: 0, z: radial.z }) > 0 ? neg(n) : n));
+    if (hint === "up" && n.y < 0) n = neg(n);
+    if (hint === "down" && n.y > 0) n = neg(n);
+    part.faces.push({ ia, ib, ic, id, n, kind, mat, th: Math.atan2(mid.z - part.center.z, mid.x - part.center.x), y: mid.y, r: rl, group: part.cutGroup });
+  }
+  function addLathe(part, y0, y1, rFn, nY, nT, kind, mat, hint) {
+    const base = part.verts.length, stride = nT + 1;
+    for (let i = 0; i <= nY; i++) {
+      const y = y0 + (y1 - y0) * (i / nY), r = rFn(y);
+      for (let j = 0; j <= nT; j++) {
+        const th = (j / nT) * Math.PI * 2;
+        part.verts.push({ x: part.center.x + Math.cos(th) * r, y, z: part.center.z + Math.sin(th) * r });
+      }
+    }
+    for (let i = 0; i < nY; i++) for (let j = 0; j < nT; j++) {
+      const i00 = base + i * stride + j, i10 = base + (i + 1) * stride + j, i11 = base + (i + 1) * stride + j + 1, i01 = base + i * stride + j + 1;
+      const before = part.faces.length;
+      addFace(part, i00, i10, i11, i01, kind, mat, hint);
+      if (part.faces.length === before) continue;
+      const face = part.faces[part.faces.length - 1];
+      const yMid = (part.verts[i00].y + part.verts[i10].y) * 0.5;
+      const th = Math.atan2(part.verts[i00].z + part.verts[i11].z - 2 * part.center.z, part.verts[i00].x + part.verts[i11].x - 2 * part.center.x);
+      const yA = Math.max(y0, yMid - 0.04), yB = Math.min(y1, yMid + 0.04);
+      const drdy = (rFn(yB) - rFn(yA)) / Math.max(0.02, yB - yA);
+      let sn = normalize({ x: Math.cos(th), y: -drdy, z: Math.sin(th) });
+      if (hint === "in") sn = neg(sn);
+      face.n = sn;
+    }
+  }
+  function addCylinder(part, y0, y1, r, nT, kind, mat, caps) {
+    addLathe(part, y0, y1, function () { return r; }, 2, nT, kind, mat, "out");
+    if (!caps) return;
+    const base = part.verts.length;
+    part.verts.push({ x: part.center.x, y: y1, z: part.center.z }, { x: part.center.x, y: y0, z: part.center.z });
+    const top = [], bot = [];
+    for (let j = 0; j < nT; j++) {
+      const th = (j / nT) * Math.PI * 2;
+      top.push(part.verts.length);
+      part.verts.push({ x: part.center.x + Math.cos(th) * r, y: y1, z: part.center.z + Math.sin(th) * r });
+      bot.push(part.verts.length);
+      part.verts.push({ x: part.center.x + Math.cos(th) * r, y: y0, z: part.center.z + Math.sin(th) * r });
+    }
+    for (let j = 0; j < nT; j++) {
+      const j2 = (j + 1) % nT;
+      addFace(part, base, top[j], top[j2], top[j], kind, mat, "up");
+      addFace(part, base + 1, bot[j2], bot[j], bot[j2], kind, mat, "down");
+    }
+  }
+  function addDome(part, radius, nPhi, nT, kind, mat) {
+    const base = part.verts.length, stride = nT + 1;
+    for (let i = 0; i <= nPhi; i++) {
+      const phi = (i / nPhi) * Math.PI / 2, rr = Math.sin(phi) * radius, y = part.center.y + Math.cos(phi) * radius;
+      for (let j = 0; j <= nT; j++) {
+        const th = (j / nT) * Math.PI * 2;
+        part.verts.push({ x: part.center.x + Math.cos(th) * rr, y, z: part.center.z + Math.sin(th) * rr });
+      }
+    }
+    for (let i = 0; i < nPhi; i++) for (let j = 0; j < nT; j++) {
+      addFace(part, base + i * stride + j, base + (i + 1) * stride + j, base + (i + 1) * stride + j + 1, base + i * stride + j + 1, kind, mat, "out");
+    }
+  }
+  function addTube(part, points, radius, nS, kind, mat) {
+    const rings = [];
+    let side = null;
+    points.forEach(function (p, i) {
+      const tan = normalize(sub(points[Math.min(points.length - 1, i + 1)], points[Math.max(0, i - 1)]));
+      if (!side) side = normalize(cross(tan, Math.abs(tan.y) < 0.85 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 }));
+      else side = normalize(cross(cross(tan, side), tan));
+      const bin = normalize(cross(tan, side));
+      const ring = [];
+      for (let j = 0; j < nS; j++) {
+        const a = (j / nS) * Math.PI * 2;
+        ring.push(part.verts.length);
+        part.verts.push({
+          x: p.x + (side.x * Math.cos(a) + bin.x * Math.sin(a)) * radius,
+          y: p.y + (side.y * Math.cos(a) + bin.y * Math.sin(a)) * radius,
+          z: p.z + (side.z * Math.cos(a) + bin.z * Math.sin(a)) * radius
+        });
+      }
+      rings.push(ring);
+    });
+    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < nS; j++) {
+      const j2 = (j + 1) % nS;
+      addFace(part, rings[i][j], rings[i + 1][j], rings[i + 1][j2], rings[i][j2], kind, mat, "out");
+    }
+  }
+  function addFin(part, ang, r0, r1, yHalf, thick) {
+    const c = part.center;
+    function p(r, a, y) { part.verts.push({ x: c.x + Math.cos(a) * r, y: c.y + y, z: c.z + Math.sin(a) * r }); return part.verts.length - 1; }
+    const a0 = ang - thick, a1 = ang + thick;
+    const v = [p(r0, a0, -yHalf), p(r1, a0, -yHalf), p(r1, a1, -yHalf), p(r0, a1, -yHalf), p(r0, a0, yHalf), p(r1, a0, yHalf), p(r1, a1, yHalf), p(r0, a1, yHalf)];
+    addFace(part, v[4], v[5], v[6], v[7], "outer", "steel", "up");
+    addFace(part, v[0], v[3], v[2], v[1], "outer", "frame", "down");
+    addFace(part, v[0], v[1], v[5], v[4], "outer", "frame", "out");
+    addFace(part, v[1], v[2], v[6], v[5], "outer", "bearing", "out");
+  }
+  function bez(a, b, c, n) {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, u = 1 - t;
+      pts.push({ x: u * u * a.x + 2 * u * t * b.x + t * t * c.x, y: u * u * a.y + 2 * u * t * b.y + t * t * c.y, z: u * u * a.z + 2 * u * t * b.z + t * t * c.z });
+    }
+    return pts;
+  }
+  function midOf(pts) { let x = 0, y = 0, z = 0; pts.forEach(function (p) { x += p.x; y += p.y; z += p.z; }); return { x: x / pts.length, y: y / pts.length, z: z / pts.length }; }
+  function addPipe(role, mat, radius, explode, points) {
+    const center = midOf(points);
+    const part = createPart({ role, center, explode, cutGroup: "none", cls: "pipe" });
+    addTube(part, points, radius, 8, "outer", mat);
+    pipes.push({ points, mat, explode });
+  }
+  function torus(part, y, R, r, nMaj, nMin, mat) {
+    const rows = [];
+    for (let i = 0; i <= nMaj; i++) {
+      const a = (i / nMaj) * Math.PI * 2, row = [];
+      for (let j = 0; j <= nMin; j++) {
+        const b = (j / nMin) * Math.PI * 2;
+        row.push(part.verts.length);
+        part.verts.push({ x: Math.cos(a) * (R + Math.cos(b) * r), y: y + Math.sin(b) * r, z: Math.sin(a) * (R + Math.cos(b) * r) });
+      }
+      rows.push(row);
+    }
+    for (let i = 0; i < nMaj; i++) for (let j = 0; j < nMin; j++) addFace(part, rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1], "outer", mat, "out");
+  }
+
+  function build() {
+    const shell = createPart({ center: { x: 0, y: 2, z: 0 }, explode: 0, cutGroup: "shell" });
+    addLathe(shell, 0, YC1, jacketR, 56, 48, "outer", "inconel", "out");
+    const copper = createPart({ center: { x: 0, y: 2, z: 0 }, explode: 0, cutGroup: "shell" });
+    addLathe(copper, 0, YC1, copperR, 42, 36, "cutOnly", "copper", "out");
+    const gas = createPart({ center: { x: 0, y: 2, z: 0 }, explode: 0, cutGroup: "shell" });
+    addLathe(gas, 0.02, YC1 - 0.02, contour, 40, 32, "gas", "copperInner", "in");
+    const injector = createPart({ center: { x: 0, y: 3.66, z: 0 }, explode: 0, cutGroup: "injector" });
+    addCylinder(injector, 3.6, 3.7, RC - 0.01, 28, "outer", "inconel", true);
+    const bearing = createPart({ center: PIVOT, explode: 0, cutGroup: "none" });
+    addCylinder(bearing, PIVOT.y - 0.08, PIVOT.y + 0.08, 0.16, 16, "outer", "bearing", true);
+    const lip = createPart({ role: "fuel", center: { x: 0, y: 0.05, z: 0 }, explode: 0.12, cutGroup: "none" });
+    torus(lip, 0.05, jacketR(0.02) + 0.03, 0.045, 28, 6, "fuel");
+    function stack(center, role) {
+      const pump = createPart({ role, center, explode: 0.1, cutGroup: "pump", cls: "stack" });
+      addCylinder(pump, center.y - 0.62, center.y - 0.08, 0.3, 20, "outer", "inconel", true);
+      const turbC = { x: center.x, y: center.y + 0.18, z: center.z };
+      const turb = createPart({ role, center: turbC, explode: 0.1, cutGroup: "pump", cls: "stack" });
+      addCylinder(turb, center.y - 0.02, center.y + 0.38, 0.36, 22, "outer", "steel", true);
+      const domeC = { x: center.x, y: center.y + 0.7, z: center.z };
+      const cup = createPart({ role, center: domeC, explode: 0.12, cutGroup: "preburner", cls: "stack" });
+      addCylinder(cup, center.y + 0.4, center.y + 0.7, 0.34, 20, "outer", "inconel", false);
+      addDome(cup, 0.34, 8, 20, "outer", "inconel");
+      const blades = createPart({ role, center: turbC, explode: 0.1, cutGroup: "none", spin: true, cls: "rotor" });
+      for (let i = 0; i < 12; i++) addFin(blades, (i / 12) * Math.PI * 2, 0.07, 0.26, 0.02, 0.05);
+    }
+    stack(FUEL, "fuel");
+    stack(OX, "ox");
+    const frame = createPart({ role: "frame", center: { x: 0, y: PIVOT.y, z: 0 }, explode: 0, gimbal: false, cutGroup: "none", cls: "frame" });
+    torus(frame, PIVOT.y, 0.92, 0.04, 32, 6, "frame");
+    addPipe("fuel", "fuel", 0.05, 1.05, bez({ x: -2.55, y: 0.85, z: 0.55 }, { x: -2.2, y: 1.8, z: 0.4 }, { x: FUEL.x, y: FUEL.y - 0.62, z: FUEL.z }, 10));
+    addPipe("ox", "lox", 0.05, 1.05, bez({ x: 2.55, y: 0.85, z: 0.55 }, { x: 2.2, y: 1.8, z: 0.4 }, { x: OX.x, y: OX.y - 0.62, z: OX.z }, 10));
+    addPipe("fuel", "fuel", 0.04, 0.55, bez({ x: FUEL.x, y: FUEL.y - 0.15, z: FUEL.z }, { x: FUEL.x - 0.2, y: FUEL.y + 0.35, z: FUEL.z }, { x: FUEL.x, y: FUEL.y + 0.55, z: FUEL.z }, 8));
+    addPipe("ox", "lox", 0.04, 0.55, bez({ x: OX.x, y: OX.y - 0.15, z: OX.z }, { x: OX.x + 0.2, y: OX.y + 0.35, z: OX.z }, { x: OX.x, y: OX.y + 0.55, z: OX.z }, 8));
+    addPipe("ox", "lox", 0.02, 0.7, bez({ x: -0.2, y: 2.5, z: 0.85 }, { x: FUEL.x * 0.4, y: FUEL.y + 0.2, z: 0.55 }, { x: FUEL.x, y: FUEL.y + 0.72, z: FUEL.z }, 8));
+    addPipe("fuel", "fuel", 0.02, 0.7, bez({ x: 0.2, y: 2.5, z: 0.85 }, { x: OX.x * 0.4, y: OX.y + 0.2, z: 0.55 }, { x: OX.x, y: OX.y + 0.72, z: OX.z }, 8));
+    addPipe("fuel", "hotfuel", 0.055, 0.16, bez({ x: FUEL.x + 0.28, y: FUEL.y + 0.16, z: FUEL.z }, { x: -0.7, y: 3.9, z: 0.05 }, { x: -0.32, y: 3.66, z: 0.02 }, 8));
+    addPipe("ox", "hotox", 0.055, 0.16, bez({ x: OX.x - 0.28, y: OX.y + 0.16, z: OX.z }, { x: 0.7, y: 3.9, z: 0.05 }, { x: 0.32, y: 3.66, z: 0.02 }, 8));
+  }
+
+  const pool = Array.from({ length: 14000 }, function () { return { pts: [{}, {}, {}, {}] }; });
+  let poolI = 0;
+  function explodeDelta(center, amount) {
+    const h = Math.hypot(center.x, center.z);
+    if (h < 0.08 || !amount) return { x: 0, y: 0, z: 0 };
+    return { x: center.x / h * amount * 0.9, y: 0.02 * amount, z: center.z / h * amount * 0.9 };
+  }
+  function xformPoint(p, part, s, spinExtra) {
+    let q = p;
+    if (part.spin) q = rotY(q, s.spin + (spinExtra || 0), part.center);
+    if (part.explode) { const e = explodeDelta(part.center, part.explode * s.explode); q = { x: q.x + e.x, y: q.y + e.y, z: q.z + e.z }; }
+    if (part.gimbal) q = rotX(q, s.gimbal, PIVOT);
+    return q;
+  }
+  function xformNormal(n, part, s, spinExtra) {
+    let q = n;
+    if (part.spin) q = rotYd(q, s.spin + (spinExtra || 0));
+    if (part.gimbal) q = rotXd(q, s.gimbal);
+    return q;
+  }
+  function shellX(p, s) { return rotX(p, s.gimbal, PIVOT); }
+
+  function stateAt(f) {
+    const mode = f < 150 ? "skirt" : f < 300 ? "split" : f < 510 ? "pumps" : f < 750 ? "injector" : "outro";
+    let yaw = 0.7, elev = -0.5, dist = 6.6, tx = 0.12, ty = 1.2, tz = 0;
+    let shell = 0.4, pre = 0, pump = 0, inj = 0, explode = 0.05, vapor = 0, burn = 0, regen = 0.2, heat = 0, plume = 0, gimbal = 0, focus = 0;
+    if (mode === "skirt") {
+      const t = ease(f / 150);
+      yaw = lerp(0.98, 0.5, t); elev = lerp(-0.55, -0.26, t); dist = lerp(6.6, 6.15, t); ty = lerp(1.15, 2.65, t);
+      shell = lerp(0.45, 1.15, ease(clamp01((f - 8) / 100)));
+      explode = lerp(0.02, 1, ease(clamp01((f - 18) / 110)));
+      regen = 0.35 + 0.45 * t;
+    } else if (mode === "split") {
+      vapor = ease(clamp01((f - 160) / 110)); shell = 0.25; pre = 0.82; explode = 0.08;
+    } else if (mode === "pumps") {
+      const u = (f - 300) / 210;
+      focus = f < 390 ? -1 : f < 430 ? lerp(-1, 1, (f - 390) / 40) : 1;
+      const keys = [
+        { u: 0, yaw: -0.7, elev: 0.34, dist: 4.4, ty: FUEL.y + 0.42, tx: FUEL.x, tz: FUEL.z },
+        { u: 0.36, yaw: -1.2, elev: 0.02, dist: 2.85, ty: FUEL.y + 0.14, tx: FUEL.x, tz: FUEL.z },
+        { u: 0.55, yaw: 0.42, elev: 0.38, dist: 6.4, ty: 3.35, tx: 0, tz: 0 },
+        { u: 0.8, yaw: 1.2, elev: 0.02, dist: 2.85, ty: OX.y + 0.14, tx: OX.x, tz: OX.z },
+        { u: 1, yaw: 0.85, elev: 0.22, dist: 3.4, ty: OX.y + 0.28, tx: OX.x, tz: OX.z }
+      ];
+      let a = keys[0], b = keys[keys.length - 1];
+      for (let i = 0; i < keys.length - 1; i++) if (u >= keys[i].u && u <= keys[i + 1].u) { a = keys[i]; b = keys[i + 1]; }
+      const t = ease((u - a.u) / (b.u - a.u || 1));
+      yaw = lerp(a.yaw, b.yaw, t); elev = lerp(a.elev, b.elev, t); dist = lerp(a.dist, b.dist, t);
+      tx = lerp(a.tx, b.tx, t); ty = lerp(a.ty, b.ty, t); tz = lerp(a.tz, b.tz, t);
+      shell = 0.55; pump = 0.95; pre = 0.45; explode = 0.12;
+    } else if (mode === "injector") {
+      const t = ease((f - 510) / 240);
+      yaw = lerp(0.35, 0.95, t);
+      elev = lerp(0.25, 0.78, ease(clamp01((f - 510) / 80)));
+      dist = lerp(2.5, 1.62, ease(clamp01((f - 510) / 90)));
+      ty = lerp(3.2, 3.55, t); tx = lerp(0.2, 0, t);
+      shell = lerp(0.45, 1.12, ease(clamp01((f - 520) / 70)));
+      inj = lerp(0.3, 1.15, ease(clamp01((f - 530) / 60)));
+      explode = 0.08; burn = ease(clamp01((f - 545) / 70)); regen = lerp(0.4, 1, ease(clamp01((f - 540) / 80)));
+    } else {
+      const t = ease((f - 750) / 269);
+      yaw = lerp(0.4, 0.4 - Math.PI * 2.15, ease((f - 750) / 250));
+      elev = lerp(0.2, -0.48, t); dist = lerp(2.4, 8.4, t); ty = lerp(3.1, 1.55, t); tx = 0;
+      shell = lerp(0.7, 0.92, t); inj = 0.35;
+      explode = lerp(0.15, 0.78, ease(clamp01((f - 780) / 120)));
+      burn = 1; regen = 1; heat = ease(clamp01((f - 820) / 90)); plume = ease(clamp01((f - 770) / 70));
+      gimbal = ease(clamp01((f - 840) / 110)) * 15 * Math.PI / 180;
+    }
+    return { f, mode, yaw, elev, dist, tx, ty, tz, cut: { shell, preburner: pre, pump, injector: inj, none: 0 }, explode, vapor, burn, regen, heat, plume, gimbal, focus, spin: f * (6 / FPS) * Math.PI * 2, highlight: null };
+  }
+
+  function makeCam(s, w, h, ox, oy, o) {
+    const yaw = o && o.yaw != null ? o.yaw : s.yaw;
+    const elev = o && o.elev != null ? o.elev : s.elev;
+    const dist = o && o.dist != null ? o.dist : s.dist;
+    const target = { x: o && o.tx != null ? o.tx : s.tx, y: o && o.ty != null ? o.ty : s.ty, z: o && o.tz != null ? o.tz : s.tz };
+    const eye = { x: target.x + dist * Math.cos(elev) * Math.sin(yaw), y: target.y + dist * Math.sin(elev), z: target.z + dist * Math.cos(elev) * Math.cos(yaw) };
+    const zaxis = normalize(sub(eye, target));
+    let xaxis = cross({ x: 0, y: 1, z: 0 }, zaxis);
+    if (len(xaxis) < 1e-4) xaxis = { x: 1, y: 0, z: 0 };
+    xaxis = normalize(xaxis);
+    return { eye, target, xaxis, yaxis: cross(zaxis, xaxis), zaxis, ox, oy, focal: h * 0.98, w, h, cutCenter: Math.atan2(eye.z - target.z, eye.x - target.x) };
+  }
+  function project(cam, p) {
+    const v = sub(p, cam.eye), z = -dot(v, cam.zaxis);
+    if (z < 0.08) return null;
+    return { sx: cam.ox + (dot(v, cam.xaxis) / z) * cam.focal, sy: cam.oy - (dot(v, cam.yaxis) / z) * cam.focal, z };
+  }
+  function shade(base, n, view, heatK) {
+    const L = normalize({ x: -0.32, y: 0.84, z: 0.44 });
+    const nd = Math.max(0, dot(n, L));
+    const H = normalize({ x: L.x + view.x, y: L.y + view.y, z: L.z + view.z });
+    const spec = Math.pow(Math.max(0, dot(n, H)), 55);
+    const rim = Math.pow(1 - Math.max(0, dot(n, view)), 2.8);
+    let r = base[0], g = base[1], b = base[2];
+    if (heatK > 0) { r = lerp(r, 176, heatK * 0.7); g = lerp(g, 78, heatK * 0.7); b = lerp(b, 40, heatK * 0.7); }
+    const light = 0.34 + nd * 0.78;
+    return [clamp(r * light + spec * 70 + rim * 28, 0, 255), clamp(g * light + spec * 74 + rim * 34, 0, 255), clamp(b * light + spec * 78 + rim * 40, 0, 255)];
+  }
+  function rgb(c, a) {
+    const R = c[0] | 0, G = c[1] | 0, B = c[2] | 0;
+    return a == null || a >= 0.999 ? "rgb(" + R + "," + G + "," + B + ")" : "rgba(" + R + "," + G + "," + B + "," + a.toFixed(3) + ")";
+  }
+  function heatFactor(y, s) {
+    if (s.heat <= 0) return 0;
+    return s.heat * Math.min(1, Math.exp(-((y - YT) ** 2) / 0.1) * 0.9 + (y > YC0 && y < YC1 ? 0.28 : 0));
+  }
+  function hidden(face, s, cutCenter) {
+    const half = s.cut[face.group] || 0;
+    if (face.kind === "gas") return false;
+    if (half <= 0.03) return face.kind === "cutOnly";
+    if (face.r < 0.05 && face.kind === "outer" && half > 0.75) return true;
+    let d = face.th - cutCenter;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    const inside = Math.abs(d) < half;
+    if (face.kind === "outer") return inside;
+    if (face.kind === "cutOnly") return !inside;
+    return false;
+  }
+  function pushPart(part, cam, s, spinExtra, alphaMul) {
+    if (s.mode === "split" && (part.cls === "shell" || part.cls === "frame" || part.cls === "rotor" || part.role === "shell")) return;
+    const alpha = alphaMul == null ? 1 : alphaMul;
+    for (let i = 0; i < part.faces.length; i++) {
+      const face = part.faces[i];
+      if (hidden(face, s, cam.cutCenter)) continue;
+      const pa = xformPoint(part.verts[face.ia], part, s, spinExtra);
+      const pb = xformPoint(part.verts[face.ib], part, s, spinExtra);
+      const pc = xformPoint(part.verts[face.ic], part, s, spinExtra);
+      const pd = xformPoint(part.verts[face.id], part, s, spinExtra);
+      const sa = project(cam, pa), sb = project(cam, pb), sc = project(cam, pc), sd = project(cam, pd);
+      if (!sa || !sb || !sc || !sd) continue;
+      const mid = { x: (pa.x + pb.x + pc.x + pd.x) / 4, y: (pa.y + pb.y + pc.y + pd.y) / 4, z: (pa.z + pb.z + pc.z + pd.z) / 4 };
+      const n = xformNormal(face.n, part, s, spinExtra);
+      const view = normalize(sub(cam.eye, mid));
+      if (dot(n, view) <= 0.02) continue;
+      let dim = 1;
+      if (s.mode === "pumps") {
+        if (part.role === "fuel" && s.focus > 0.25) dim = 0.55;
+        if (part.role === "ox" && s.focus < -0.25) dim = 0.55;
+      }
+      if (s.mode === "split" && s.highlight) {
+        if (part.role === s.highlight) dim = 1.5;
+        else if (part.role !== "frame") dim = 0.28;
+      }
+      const base = MAT[face.mat] || MAT.inconel;
+      const hk = (face.mat === "inconel" || face.mat === "copper" || face.mat === "copperInner") ? heatFactor(face.y, s) : 0;
+      let col = shade([base[0] * dim, base[1] * dim, base[2] * dim], n, view, hk);
+      if (face.kind === "gas" && s.burn > 0 && face.y > 2.05 && face.y < 3.55) {
+        const k = s.burn * (0.9 + 0.1 * Math.sin((s.f / FPS) * Math.PI * 2 / 2.2)) * (face.y > YT ? 0.72 : 0.25);
+        col = [lerp(col[0], 26, k), lerp(col[1], 140, k), lerp(col[2], 255, k)];
+      }
+      if (poolI >= pool.length) return;
+      const cmd = pool[poolI++];
+      cmd.z = (sa.z + sb.z + sc.z + sd.z) / 4;
+      cmd.color = rgb(col, alpha);
+      cmd.pts[0].x = sa.sx; cmd.pts[0].y = sa.sy; cmd.pts[1].x = sb.sx; cmd.pts[1].y = sb.sy;
+      cmd.pts[2].x = sc.sx; cmd.pts[2].y = sc.sy; cmd.pts[3].x = sd.sx; cmd.pts[3].y = sd.sy;
+    }
+  }
+  function pushCyl(a, b, radius, mat, cam) {
+    const axis = normalize(sub(b, a));
+    let side = normalize(cross(axis, Math.abs(axis.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 }));
+    const bin = normalize(cross(axis, side));
+    function ring(p) {
+      const pts = [];
+      for (let j = 0; j < 7; j++) {
+        const ang = (j / 7) * Math.PI * 2;
+        pts.push({ x: p.x + (side.x * Math.cos(ang) + bin.x * Math.sin(ang)) * radius, y: p.y + (side.y * Math.cos(ang) + bin.y * Math.sin(ang)) * radius, z: p.z + (side.z * Math.cos(ang) + bin.z * Math.sin(ang)) * radius });
+      }
+      return pts;
+    }
+    const r0 = ring(a), r1 = ring(b);
+    for (let j = 0; j < 7; j++) {
+      const j2 = (j + 1) % 7, pts = [r0[j], r1[j], r1[j2], r0[j2]];
+      const sp = pts.map(function (p) { return project(cam, p); });
+      if (sp.some(function (p) { return !p; })) continue;
+      const mid = { x: (pts[0].x + pts[2].x) / 2, y: (pts[0].y + pts[2].y) / 2, z: (pts[0].z + pts[2].z) / 2 };
+      let n = normalize(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      const view = normalize(sub(cam.eye, mid));
+      if (dot(n, view) <= 0) n = neg(n);
+      if (poolI >= pool.length) return;
+      const cmd = pool[poolI++];
+      cmd.z = (sp[0].z + sp[1].z + sp[2].z + sp[3].z) / 4;
+      cmd.color = rgb(shade(MAT[mat], n, view, 0), 1);
+      for (let k = 0; k < 4; k++) { cmd.pts[k].x = sp[k].sx; cmd.pts[k].y = sp[k].sy; }
+    }
+  }
+  function pushCaps(cam, s) {
+    const half = s.cut.shell;
+    if (half < 0.08) return;
+    [cam.cutCenter - half, cam.cutCenter + half].forEach(function (th, t) {
+      const dir = { x: -Math.sin(th), y: 0, z: Math.cos(th) };
+      const nW = rotXd(t === 0 ? dir : neg(dir), s.gimbal);
+      for (let i = 0; i < 32; i++) {
+        const y0 = (i / 32) * (YC1 - 0.02), y1 = ((i + 1) / 32) * (YC1 - 0.02);
+        [[contour(y0), copperR(y0), contour(y1), copperR(y1), "copper"], [copperR(y0), jacketR(y0), copperR(y1), jacketR(y1), "inconel"]].forEach(function (band) {
+          const pts = [
+            { x: Math.cos(th) * band[0], y: y0, z: Math.sin(th) * band[0] },
+            { x: Math.cos(th) * band[1], y: y0, z: Math.sin(th) * band[1] },
+            { x: Math.cos(th) * band[3], y: y1, z: Math.sin(th) * band[3] },
+            { x: Math.cos(th) * band[2], y: y1, z: Math.sin(th) * band[2] }
+          ].map(function (p) { return rotX(p, s.gimbal, PIVOT); });
+          const sp = pts.map(function (p) { return project(cam, p); });
+          if (sp.some(function (p) { return !p; })) return;
+          const mid = pts[0];
+          const view = normalize(sub(cam.eye, mid));
+          if (dot(nW, view) <= 0.02) return;
+          if (poolI >= pool.length) return;
+          const cmd = pool[poolI++];
+          cmd.z = (sp[0].z + sp[2].z) / 2;
+          cmd.color = rgb(shade(MAT[band[4]], nW, view, heatFactor((y0 + y1) / 2, s)), 1);
+          for (let k = 0; k < 4; k++) { cmd.pts[k].x = sp[k].sx; cmd.pts[k].y = sp[k].sy; }
+        });
+      }
+    });
+  }
+  function actuators(cam, s) {
+    [[{ x: 0.1, y: 2.55, z: 1.9 }, { x: 0.04, y: PIVOT.y, z: 0.7 }], [{ x: 1.25, y: 2.5, z: 0.95 }, { x: 0.52, y: PIVOT.y, z: 0.42 }]].forEach(function (pair) {
+      const e = explodeDelta(pair[1], s.explode * 0.85);
+      const eng = rotX({ x: pair[1].x + e.x, y: pair[1].y + e.y, z: pair[1].z + e.z }, s.gimbal, PIVOT);
+      const mid = { x: pair[0].x + (eng.x - pair[0].x) * 0.58, y: pair[0].y + (eng.y - pair[0].y) * 0.58, z: pair[0].z + (eng.z - pair[0].z) * 0.58 };
+      pushCyl(pair[0], mid, 0.07, "steel", cam);
+      pushCyl(pair[0], eng, 0.032, "bearing", cam);
+    });
+  }
+  function flush() {
+    const list = pool.slice(0, poolI).sort(function (a, b) { return b.z - a.z; });
+    ctx.lineJoin = "round";
+    list.forEach(function (cmd) {
+      ctx.beginPath();
+      ctx.moveTo(cmd.pts[0].x, cmd.pts[0].y);
+      ctx.lineTo(cmd.pts[1].x, cmd.pts[1].y); ctx.lineTo(cmd.pts[2].x, cmd.pts[2].y); ctx.lineTo(cmd.pts[3].x, cmd.pts[3].y);
+      ctx.closePath();
+      ctx.fillStyle = cmd.color; ctx.fill();
+      ctx.strokeStyle = cmd.color; ctx.lineWidth = 1.6; ctx.stroke();
+    });
+    return list.length;
+  }
+  function drawWorld(cam, s) {
+    poolI = 0;
+    built.forEach(function (part) {
+      if (part.spin && s.mode === "pumps") for (let k = 5; k >= 1; k--) pushPart(part, cam, s, -k * 0.22, 0.1);
+      pushPart(part, cam, s, 0, 1);
+    });
+    if (s.mode !== "split") { pushCaps(cam, s); actuators(cam, s); }
+    return flush();
+  }
+  function strokeWorld(cam, pts, color, width, dash) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    if (dash) { ctx.setLineDash([9, 12]); ctx.lineDashOffset = dash; }
+    ctx.beginPath();
+    let on = false;
+    pts.forEach(function (p) {
+      const s = project(cam, p);
+      if (!s) { on = false; return; }
+      if (!on) { ctx.moveTo(s.sx, s.sy); on = true; } else ctx.lineTo(s.sx, s.sy);
+    });
+    ctx.stroke(); ctx.restore();
+  }
+  function drawFlows(cam, s) {
+    pipes.forEach(function (pipe) {
+      const center = midOf(pipe.points);
+      const e = explodeDelta(center, pipe.explode * s.explode);
+      const world = pipe.points.map(function (p) { return rotX({ x: p.x + e.x, y: p.y + e.y, z: p.z + e.z }, s.gimbal, PIVOT); });
+      const cryo = pipe.mat === "fuel" || pipe.mat === "hotfuel";
+      strokeWorld(cam, world, cryo ? "rgba(0,229,255,.9)" : "rgba(224,247,250,.9)", 1.7, -s.f * 0.8);
+    });
+  }
+  function drawRegen(cam, s) {
+    if (s.regen < 0.08 || s.cut.shell < 0.25) return;
+    const half = s.cut.shell;
+    for (let i = 0; i < 12; i++) {
+      const th = cam.cutCenter + (i - 5.5) * (half / 7);
+      let d = th - cam.cutCenter; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      if (Math.abs(d) > half * 0.88) continue;
+      const pts = [];
+      for (let k = 0; k <= 16; k++) {
+        const y = 0.15 + (k / 16) * 3.3, r = contour(y) + 0.02;
+        pts.push(shellX({ x: Math.cos(th) * r, y, z: Math.sin(th) * r }, s));
+      }
+      strokeWorld(cam, pts, "rgba(0,229,255," + (0.35 * s.regen).toFixed(3) + ")", 1.2, 0);
+      const u = (s.f * 0.012 + i * 0.08) % 1, y = 0.15 + u * 3.3, r = contour(y) + 0.02;
+      const p = project(cam, shellX({ x: Math.cos(th) * r, y, z: Math.sin(th) * r }, s));
+      if (!p) continue;
+      ctx.fillStyle = "rgba(0,229,255," + (0.9 * s.regen).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  function drawBurn(cam, s) {
+    if (s.burn < 0.03 || (s.cut.shell < 0.35 && s.mode !== "injector" && s.mode !== "outro")) return;
+    const pulse = 0.9 + 0.1 * Math.sin((s.f / FPS) * Math.PI * 2 / 2.2);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let k = 0; k < 8; k++) {
+      const y = 2.2 + (k / 7) * 1.25;
+      const p = project(cam, shellX({ x: 0, y, z: 0 }, s));
+      const pR = project(cam, shellX({ x: contour(y) * 0.45, y, z: 0 }, s));
+      if (!p || !pR) continue;
+      const rad = Math.max(8, Math.hypot(pR.sx - p.sx, pR.sy - p.sy));
+      const g = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, rad);
+      const a = s.burn * pulse * 0.16;
+      g.addColorStop(0, "rgba(26,140,255," + a.toFixed(3) + ")"); g.addColorStop(1, "rgba(26,140,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawElements(cam, s) {
+    if (s.mode !== "injector" && s.mode !== "outro") return;
+    const up = rotXd({ x: 0, y: 1, z: 0 }, s.gimbal);
+    const faceP = shellX({ x: 0, y: 3.66, z: 0 }, s);
+    if (dot(up, normalize(sub(cam.eye, faceP))) < 0.12) return;
+    [{ r: 0, n: 1 }, { r: 0.15, n: 6 }, { r: 0.28, n: 12 }, { r: 0.41, n: 18 }].forEach(function (ring, ri) {
+      for (let i = 0; i < ring.n; i++) {
+        const th = ring.n === 1 ? 0 : (i / ring.n) * Math.PI * 2 + 0.18;
+        const x = Math.cos(th) * ring.r, z = Math.sin(th) * ring.r;
+        if (s.cut.injector > 0.25 && ring.r > 0.04) {
+          let d = Math.atan2(z, x) - cam.cutCenter;
+          while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+          if (Math.abs(d) < s.cut.injector * 0.88) continue;
+        }
+        const p = project(cam, shellX({ x, y: 3.71, z }, s));
+        const pR = project(cam, shellX({ x: x + 0.045, y: 3.71, z }, s));
+        if (!p || !pR) continue;
+        const rad = Math.max(3, Math.hypot(pR.sx - p.sx, pR.sy - p.sy));
+        ctx.fillStyle = "rgba(0,229,255,.92)"; ctx.beginPath(); ctx.arc(p.sx, p.sy, rad, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#12141a"; ctx.beginPath(); ctx.arc(p.sx, p.sy, rad * 0.62, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(224,247,250,.96)"; ctx.beginPath(); ctx.arc(p.sx, p.sy, rad * 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+  }
+  function drawPlume(cam, s) {
+    if (s.plume < 0.02) return;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 110; i++) {
+      const u = (s.f * 0.02 + i * 0.137) % 1, spread = 0.42 + u * 2.35, th = i * 2.399;
+      const p = project(cam, shellX({ x: Math.cos(th) * spread * 0.55, y: -u * 2.2, z: Math.sin(th) * spread * 0.55 }, s));
+      if (!p) continue;
+      ctx.fillStyle = u < 0.22 ? "rgba(224,247,250," + (s.plume * (1 - u) * 0.28).toFixed(3) + ")" : "rgba(26,140,255," + (s.plume * (1 - u) * 0.22).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 2 + u * 8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawVapor(cam, s, side) {
+    const amount = s.mode === "split" ? Math.max(s.vapor, 0.4) : s.vapor;
+    if (amount < 0.02) return;
+    const center = side === "fuel" ? { x: FUEL.x, y: FUEL.y + 0.85, z: FUEL.z } : { x: OX.x, y: OX.y + 0.85, z: OX.z };
+    const color = side === "fuel" ? "0,229,255" : "224,247,250";
+    const e = explodeDelta(center, 0.12 * s.explode);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 24; i++) {
+      const u = (s.f * 0.01 + i * 0.09) % 1, th = i * 2.2, rr = 0.04 + u * 0.2;
+      const p = project(cam, rotX({ x: center.x + e.x + Math.cos(th) * rr, y: center.y - u * 0.22, z: center.z + e.z + Math.sin(th) * rr }, s.gimbal, PIVOT));
+      if (!p) continue;
+      ctx.fillStyle = "rgba(" + color + "," + (amount * (1 - u) * 0.4).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, 2 + u * 5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function label(cam, text, world, color, dx, dy, placed) {
+    const p = project(cam, world);
+    if (!p || p.sx < 36 || p.sx > cam.w - 300 || p.sy < 68 || p.sy > cam.h - 108) return;
+    const lx = p.sx + dx, ly = p.sy + dy;
+    if (placed.some(function (q) { return Math.hypot(q.x - lx, q.y - ly) < 72; })) return;
+    placed.push({ x: lx, y: ly });
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(lx, ly); ctx.stroke();
+    ctx.fillStyle = color; ctx.font = "11px JetBrains Mono, Cascadia Mono, ui-monospace, monospace"; ctx.fillText(text, lx + 4, ly - 4);
+  }
+  function drawLabels(cam, s) {
+    if (s.mode === "split") return;
+    const placed = [];
+    ctx.save();
+    if (s.mode === "skirt") {
+      label(cam, "CAST JACKET", shellX({ x: -0.15, y: 0.9, z: jacketR(0.9) * 0.9 }, s), "#c5cad3", 40, -36, placed);
+      label(cam, "COPPER LINER", shellX({ x: Math.cos(cam.cutCenter) * copperR(1.6), y: 1.6, z: Math.sin(cam.cutCenter) * copperR(1.6) }, s), "#e7a27a", -150, 24, placed);
+      label(cam, "CH4 FEED", shellX({ x: -2.2, y: 1.3, z: 0.4 }, s), "#00e5ff", -90, -20, placed);
+      label(cam, "LOX FEED", shellX({ x: 2.2, y: 1.3, z: 0.4 }, s), "#e0f7fa", 24, 12, placed);
+    } else if (s.mode === "pumps") {
+      const side = s.focus >= 0 ? OX : FUEL;
+      label(cam, s.focus >= 0 ? "OX TURBINE" : "FUEL TURBINE", shellX({ x: side.x, y: side.y + 0.18, z: side.z }, s), s.focus >= 0 ? "#e0f7fa" : "#00e5ff", 24, -28, placed);
+      label(cam, "40,000 RPM CALLOUT", shellX({ x: side.x, y: side.y, z: side.z }, s), "#d5d8df", 24, 18, placed);
+    } else if (s.mode === "injector") {
+      label(cam, "COAXIAL ELEMENT", shellX({ x: 0.28, y: 3.72, z: 0.05 }, s), "#e0f7fa", 16, -26, placed);
+      label(cam, "CHAMBER", shellX({ x: 0, y: 3.05, z: 0 }, s), "#1a8cff", 20, 22, placed);
+    } else {
+      label(cam, "GIMBAL " + (s.gimbal * 180 / Math.PI).toFixed(1) + " deg", PIVOT, "#d5d8df", 28, -18, placed);
+      label(cam, "THROAT PEAK", shellX({ x: Math.cos(cam.cutCenter) * jacketR(YT), y: YT, z: Math.sin(cam.cutCenter) * jacketR(YT) }, s), "#e7a27a", -120, -6, placed);
+      label(cam, "SUPERSONIC BELL", shellX({ x: 0, y: 0.7, z: 0 }, s), "#c5cad3", 18, 20, placed);
+    }
+    ctx.restore();
+  }
+  function drawGimbalCue(cam, s) {
+    if (s.gimbal < 0.02) return;
+    const o = project(cam, PIVOT), a = project(cam, { x: 0, y: PIVOT.y + 1.4, z: 0 }), b = project(cam, shellX({ x: 0, y: PIVOT.y + 1.4, z: 0 }, s));
+    if (!o || !a || !b) return;
+    ctx.save(); ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(213,216,223,.6)";
+    ctx.beginPath(); ctx.moveTo(o.sx, o.sy); ctx.lineTo(a.sx, a.sy); ctx.stroke();
+    ctx.setLineDash([]); ctx.strokeStyle = "#00e5ff"; ctx.beginPath(); ctx.moveTo(o.sx, o.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke(); ctx.restore();
+  }
+  function drawGround(cam) {
+    ctx.save(); ctx.strokeStyle = "rgba(255,255,255,.04)"; ctx.beginPath();
+    for (let i = -5; i <= 5; i++) {
+      const a = project(cam, { x: i, y: -3.15, z: -5 }), b = project(cam, { x: i, y: -3.15, z: 5 });
+      const c = project(cam, { x: -5, y: -3.15, z: i }), d = project(cam, { x: 5, y: -3.15, z: i });
+      if (a && b) { ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); }
+      if (c && d) { ctx.moveTo(c.sx, c.sy); ctx.lineTo(d.sx, d.sy); }
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  function resize() {
+    const dpr = Math.min(1.6, window.devicePixelRatio || 1);
+    const w = window.innerWidth, h = window.innerHeight;
+    const W = Math.floor(w * dpr), H = Math.floor(h * dpr);
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w, h };
+  }
+  function render(f) {
+    const size = resize(), s = stateAt(f), w = size.w, h = size.h;
+    const g = ctx.createRadialGradient(w * 0.46, h * 0.48, 20, w * 0.5, h * 0.45, Math.max(w, h) * 0.72);
+    g.addColorStop(0, "#141820"); g.addColorStop(1, "#07080b");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    let drawn = 0;
+    if (s.mode === "split") {
+      [{ x: 0, role: "fuel", yaw: 0.95, tx: FUEL.x, ty: FUEL.y + 0.78, tz: FUEL.z }, { x: w / 2, role: "ox", yaw: -0.95, tx: OX.x, ty: OX.y + 0.78, tz: OX.z }].forEach(function (panel) {
+        ctx.save(); ctx.beginPath(); ctx.rect(panel.x, 0, w / 2, h); ctx.clip();
+        const cam = makeCam(s, w, h, panel.x + w / 4, h * 0.36, { yaw: panel.yaw, elev: 0.16, dist: 1.9, tx: panel.tx, ty: panel.ty, tz: panel.tz });
+        const local = Object.assign({}, s, { highlight: panel.role });
+        drawn += drawWorld(cam, local);
+        drawVapor(cam, local, panel.role);
+        ctx.restore();
+      });
+    } else {
+      const cam = makeCam(s, w, h, w < 880 ? w * 0.5 : w * 0.43, w < 880 ? h * 0.34 : h * 0.5, null);
+      if (s.mode === "outro" && cam.eye.y > -1.1) drawGround(cam);
+      drawn = drawWorld(cam, s);
+      drawFlows(cam, s); drawRegen(cam, s); drawBurn(cam, s); drawPlume(cam, s); drawElements(cam, s); drawGimbalCue(cam, s);
+      if (s.mode !== "split") { drawVapor(cam, s, "fuel"); drawVapor(cam, s, "ox"); }
+      drawLabels(cam, s);
+    }
+    const fade = f < 10 ? 1 - f / 10 : f > 1002 ? (f - 1002) / 17 : 0;
+    document.getElementById("fade").style.opacity = String(fade * 0.82);
+    document.body.dataset.mode = s.mode;
+    document.body.dataset.heat = s.heat > 0.45 && w >= 880 ? "1" : "0";
+    document.documentElement.dataset.ready = "1";
+    document.documentElement.dataset.faces = String(drawn);
+    updateChrome(s);
+  }
+
+  const shots = [
+    ["00.0-05.0s · NOZZLE SKIRT", "Regenerative jacket, opened", "Low pass up the bell. The cast jacket opens a section so the copper-alloy liner is visible. Gimbal actuators and the external feed manifolds slide out on radial axes."],
+    ["05.0-10.0s · PREBURNERS", "Fuel-rich and oxygen-rich", "Almost all of the methane, plus a small oxidizer flow, enters the fuel-rich dome. Almost all of the oxygen, plus a small fuel flow, enters the oxygen-rich dome. Each stream leaves as hot gas for its own turbine."],
+    ["10.0-17.0s · TURBOPUMPS", "Two shafts, no shared seal", "The fuel turbine sees only fuel-rich gas. The oxidizer turbine sees only oxygen-rich gas. No shaft has to seal fuel against oxidizer. The 40,000 RPM figure is a storyboard callout. The smear is directional: at 30 fps that shaft speed is about 22 revolutions per frame."],
+    ["17.0-25.0s · INJECTOR", "All-gas main injection", "Both propellants arrive as gas. The face is a schematic coaxial pattern: oxygen-rich core, fuel-rich annulus. Mach blue marks the chamber for the 300-bar-class storyboard setpoint. It is not a flame spectrum. Liquid methane runs up the copper channels."],
+    ["25.0-34.0s · EXPANSION", "Supersonic bell, 15 deg pitch", "Past the throat a choked flow is supersonic in the bell. No exit Mach number is stated. The mount pitches 15 degrees, storyboard travel. The color wash is an ordinal heat-flux sketch that peaks at the throat."]
+  ];
+  function shotIndex(mode) { return mode === "skirt" ? 0 : mode === "split" ? 1 : mode === "pumps" ? 2 : mode === "injector" ? 3 : 4; }
+  function updateChrome(s) {
+    const shot = shots[shotIndex(s.mode)];
+    document.getElementById("plate-kicker").textContent = shot[0];
+    document.getElementById("plate-title").textContent = shot[1];
+    document.getElementById("plate-body").textContent = shot[2];
+    const wedge = s.mode === "pumps" ? s.cut.pump : s.mode === "split" ? s.cut.preburner : s.mode === "injector" ? Math.max(s.cut.injector, s.cut.shell) : s.cut.shell;
+    const rows = [["Clock", (s.f / FPS).toFixed(2) + "s"], ["Wedge", Math.round(Math.min(180, wedge * 2 * 180 / Math.PI)) + " deg"]];
+    if (s.mode === "skirt") rows.push(["Manifold travel", Math.round(s.explode * 100) + "%"]);
+    if (s.mode === "split") rows.push(["Vapor, visual", Math.round(s.vapor * 100) + "%"]);
+    if (s.mode === "pumps") rows.push(["Shaft speed", "40,000 RPM"], ["Discharge", "300 bar class"], ["Focus", s.focus >= 0 ? "Oxidizer shaft" : "Fuel shaft"]);
+    if (s.mode === "injector") rows.push(["Chamber code", "#1A8CFF"], ["Coolant", "Liquid methane"]);
+    if (s.mode === "outro") rows.push(["Gimbal pitch", (s.gimbal * 180 / Math.PI).toFixed(1) + " deg"], ["Heat-flux sketch", s.heat > 0.5 ? "On" : "Rising"]);
+    const dl = document.getElementById("plate-stats");
+    dl.replaceChildren();
+    rows.forEach(function (row) {
+      const dt = document.createElement("dt"), dd = document.createElement("dd");
+      dt.textContent = row[0]; dd.textContent = row[1]; dl.append(dt, dd);
+    });
+    const sec = s.f / FPS;
+    document.getElementById("tc").textContent = String(Math.floor(sec / 60)).padStart(2, "0") + ":" + (sec % 60).toFixed(2).padStart(5, "0") + " · f " + String(s.f).padStart(4, "0");
+    const scrub = document.getElementById("scrub");
+    if (!scrubbing) scrub.value = String(s.f);
+    document.querySelectorAll(".shots button").forEach(function (btn, i) { btn.classList.toggle("on", i === shotIndex(s.mode)); });
+    document.querySelectorAll(".segs i").forEach(function (seg, i) { seg.classList.toggle("on", i === shotIndex(s.mode)); });
+    document.getElementById("panels").hidden = s.mode !== "split";
+    document.getElementById("legend").hidden = !(s.heat > 0.45 && window.innerWidth >= 880);
+    document.getElementById("play").textContent = playing ? "PAUSE" : "PLAY";
+  }
+  function loop(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    if (playing && !scrubbing) {
+      acc += dt; let guard = 0;
+      while (acc >= 1 / FPS && guard++ < 4) {
+        acc -= 1 / FPS; frame++;
+        if (frame >= TOTAL) frame = 0;
+      }
+    }
+    render(frame); requestAnimationFrame(loop);
+  }
+  document.getElementById("play").addEventListener("click", function () { playing = !playing; if (playing && frame >= TOTAL - 1) frame = 0; });
+  document.getElementById("restart").addEventListener("click", function () { frame = 0; acc = 0; playing = !reduce; });
+  const scrub = document.getElementById("scrub");
+  scrub.addEventListener("pointerdown", function () { scrubbing = true; });
+  window.addEventListener("pointerup", function () { scrubbing = false; });
+  scrub.addEventListener("input", function () { frame = parseInt(scrub.value, 10) || 0; });
+  document.querySelectorAll(".shots button").forEach(function (btn) { btn.addEventListener("click", function () { frame = parseInt(btn.dataset.jump, 10) || 0; acc = 0; }); });
+  window.addEventListener("keydown", function (e) {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "SUMMARY") return;
+    if (e.code === "Space") { e.preventDefault(); playing = !playing; }
+    else if (e.code === "ArrowRight" || e.code === "Period") { playing = false; frame = Math.min(TOTAL - 1, frame + (e.shiftKey ? 10 : 1)); }
+    else if (e.code === "ArrowLeft" || e.code === "Comma") { playing = false; frame = Math.max(0, frame - (e.shiftKey ? 10 : 1)); }
+    else if (e.code >= "Digit1" && e.code <= "Digit5") frame = [0, 150, 300, 510, 750][e.code.charCodeAt(5) - 49];
+  });
+  build();
+  render(frame);
+  if (!q.has("still")) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
